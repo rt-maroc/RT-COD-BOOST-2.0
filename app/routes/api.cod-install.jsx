@@ -12,15 +12,45 @@ export async function action({ request }) {
     // Authentification Shopify
     const { admin } = await authenticate.admin(request);
     
-    if (!admin || !admin.rest) {
-      throw new Error("Shopify Admin API not available");
+    if (!admin) {
+      throw new Error("Admin authentication failed");
     }
     
-    const shop = admin.session.shop;
-    const accessToken = admin.session.accessToken;
+    // Extraire shop et session de différentes manières possibles
+    let shop, session;
+    
+    if (admin.session) {
+      shop = admin.session.shop;
+      session = admin.session;
+    } else if (admin.shop) {
+      shop = admin.shop;
+      session = admin;
+    } else if (admin.context?.session) {
+      shop = admin.context.session.shop;
+      session = admin.context.session;
+    } else {
+      throw new Error("Cannot find shop/session in admin object");
+    }
+    
+    if (!shop) {
+      throw new Error("Shop domain not found");
+    }
     
     console.log("✅ Authenticated for shop:", shop);
-    console.log("🔑 Access token available:", !!accessToken);
+    console.log("🔑 Session object keys:", Object.keys(session));
+    
+    // Créer le REST client si pas disponible
+    let restClient;
+    if (admin.rest) {
+      restClient = admin.rest;
+    } else {
+      // Fallback - utiliser fetch direct
+      const accessToken = session.accessToken;
+      if (!accessToken) {
+        throw new Error("Access token not found");
+      }
+      console.log("🔄 Using direct fetch method");
+    }
     
     // URL du script à injecter
     const scriptUrl = `${process.env.SHOPIFY_APP_URL}/cod-form-widget.js`;
@@ -35,23 +65,53 @@ export async function action({ request }) {
     console.log("🗑️ Cleaning up old script tags...");
     
     try {
-      const existingScripts = await admin.rest.resources.ScriptTag.all({
-        session: admin.session
-      });
+      let existingScripts;
       
-      console.log(`📋 Found ${existingScripts.data.length} existing script tags`);
+      if (restClient && admin.rest?.resources?.ScriptTag) {
+        existingScripts = await admin.rest.resources.ScriptTag.all({
+          session: session
+        });
+        existingScripts = existingScripts.data;
+      } else {
+        // Méthode fetch directe
+        const response = await fetch(`https://${shop}/admin/api/2023-10/script_tags.json`, {
+          headers: {
+            'X-Shopify-Access-Token': session.accessToken,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        existingScripts = data.script_tags || [];
+      }
       
-      for (const script of existingScripts.data) {
+      console.log(`📋 Found ${existingScripts.length} existing script tags`);
+      
+      for (const script of existingScripts) {
         if (script.src && (
           script.src.includes('cod-form-widget') || 
           script.src.includes('rt-cod') ||
           script.src.includes('onrender.com')
         )) {
           console.log("🗑️ Removing old script:", script.id, script.src);
-          await admin.rest.resources.ScriptTag.delete({
-            session: admin.session,
-            id: script.id
-          });
+          
+          if (restClient && admin.rest?.resources?.ScriptTag) {
+            await admin.rest.resources.ScriptTag.delete({
+              session: session,
+              id: script.id
+            });
+          } else {
+            await fetch(`https://${shop}/admin/api/2023-10/script_tags/${script.id}.json`, {
+              method: 'DELETE',
+              headers: {
+                'X-Shopify-Access-Token': session.accessToken
+              }
+            });
+          }
         }
       }
     } catch (cleanupError) {
@@ -61,24 +121,49 @@ export async function action({ request }) {
     // Créer le nouveau script tag
     console.log("📝 Creating new script tag...");
     
-    const scriptTag = new admin.rest.resources.ScriptTag({
-      session: admin.session
-    });
+    let scriptTag;
     
-    scriptTag.event = "onload";
-    scriptTag.src = scriptUrl;
-    scriptTag.display_scope = "all";
-    
-    console.log("💾 Saving script tag with data:", {
-      event: scriptTag.event,
-      src: scriptTag.src,
-      display_scope: scriptTag.display_scope
-    });
-    
-    const savedScript = await scriptTag.save();
-    
-    if (!savedScript) {
-      throw new Error("Script tag save returned null");
+    if (restClient && admin.rest?.resources?.ScriptTag) {
+      // Méthode REST API
+      scriptTag = new admin.rest.resources.ScriptTag({
+        session: session
+      });
+      
+      scriptTag.event = "onload";
+      scriptTag.src = scriptUrl;
+      scriptTag.display_scope = "all";
+      
+      console.log("💾 Saving script tag with REST API...");
+      await scriptTag.save();
+      
+    } else {
+      // Méthode fetch directe
+      const scriptData = {
+        script_tag: {
+          event: "onload",
+          src: scriptUrl,
+          display_scope: "all"
+        }
+      };
+      
+      console.log("💾 Creating script tag with fetch...");
+      
+      const response = await fetch(`https://${shop}/admin/api/2023-10/script_tags.json`, {
+        method: 'POST',
+        headers: {
+          'X-Shopify-Access-Token': session.accessToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(scriptData)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      scriptTag = result.script_tag;
     }
     
     console.log("✅ Script tag created successfully:", {

@@ -3,7 +3,7 @@
 client_id = "81f71a00afee19dedf28a541477ef23b"
 name = "RT COD BOOST 2.0"
 handle = "rt-cod-boost-2-0"
-application_url = "https://twins-missouri-biotechnology-steady.trycloudflare.com"
+application_url = "https://rt-cod-boost-2-0.onrender.com"
 embedded = true
 
 [build]
@@ -23,10 +23,14 @@ api_version = "2025-07"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
+scopes = "write_products,read_orders,write_orders,read_customers,write_customers,read_script_tags,write_script_tags"
 
 [auth]
-redirect_urls = ["https://twins-missouri-biotechnology-steady.trycloudflare.com/auth/callback", "https://twins-missouri-biotechnology-steady.trycloudflare.com/auth/shopify/callback", "https://twins-missouri-biotechnology-steady.trycloudflare.com/api/auth/callback"]
+redirect_urls = [
+  "https://rt-cod-boost-2-0.onrender.com/auth/callback", 
+  "https://rt-cod-boost-2-0.onrender.com/auth/shopify/callback", 
+  "https://rt-cod-boost-2-0.onrender.com/api/auth/callback"
+]
 
 [pos]
 embedded = false
