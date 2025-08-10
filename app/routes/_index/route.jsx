@@ -1,4 +1,4 @@
-import { authenticate } from "../../shopify.server";
+import { authenticate } from "../../../shopify.server";
 import { json } from "@remix-run/node";
 import RTCodBoostDashboard from "../app._index.jsx";
 
