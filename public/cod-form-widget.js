@@ -6,7 +6,7 @@
   // Configuration
   const CONFIG = {
     formId: 'rt-cod-form',
-    apiEndpoint: '/apps/rt-cod-boost-2-0/api/cod-submit', // Utilise le proxy Shopify
+    apiEndpoint: '/api/cod-submit', // Utilise le proxy Shopify
     debug: true
   };
 
