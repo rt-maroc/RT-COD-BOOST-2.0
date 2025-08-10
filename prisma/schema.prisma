@@ -1,0 +1,178 @@
+// rt-cod-boost-2-0/prisma/schema.prisma
+// SCHÉMA FINAL POSTGRESQL - SANS ERREURS
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===============================
+// 🏪 MODÈLES SHOPIFY (REQUIS)
+// ===============================
+
+model Session {
+  id          String    @id
+  shop        String
+  state       String
+  isOnline    Boolean   @default(false)
+  scope       String?
+  expires     DateTime?
+  accessToken String
+  userId      BigInt?
+  firstName   String?
+  lastName    String?
+  email       String?
+  accountOwner Boolean @default(false)
+  locale      String?
+  collaborator Boolean? @default(false)
+  emailVerified Boolean? @default(false)
+
+  @@map("sessions")
+}
+
+// ===============================
+// 📦 MODÈLES COD - RT COD BOOST
+// ===============================
+
+// Commandes COD
+model CodOrder {
+  id              String   @id @default(cuid())
+  
+  // Informations client
+  customerName    String
+  customerPhone   String
+  customerEmail   String?
+  customerAddress String
+  customerCity    String
+  customerCountry String   @default("MA")
+  
+  // Informations produit
+  productTitle    String
+  productPrice    Decimal  @db.Decimal(10,2)
+  productQuantity Int      @default(1)
+  
+  // Informations commande
+  orderNotes      String?
+  deliveryFee     Decimal  @default(0) @db.Decimal(10,2)
+  totalAmount     Decimal  @db.Decimal(10,2)
+  
+  // Statut et suivi
+  status          String   @default("pending")
+  shopifyOrderId  String?
+  trackingNumber  String?
+  
+  // Métadonnées
+  shop            String
+  source          String   @default("cod-form")
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("cod_orders")
+  @@index([shop])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Configuration du formulaire COD
+model CodSettings {
+  id               String   @id @default(cuid())
+  shop             String   @unique
+  
+  // Configuration formulaire
+  formType         String   @default("integrated")
+  countries        String   @default("['MA']")
+  multiCountry     Boolean  @default(false)
+  
+  // Style et apparence
+  textColor        String   @default("#000000")
+  backgroundColor  String   @default("#ffffff")
+  borderRadius     Int      @default(8)
+  borderWidth      Int      @default(1)
+  borderColor      String   @default("#e5e7eb")
+  rtlSupport       Boolean  @default(false)
+  
+  // Visibilité
+  showOnProducts   Boolean  @default(true)
+  showOnCart       Boolean  @default(true)
+  showOnCheckout   Boolean  @default(false)
+  
+  // Textes personnalisés
+  buttonText       String   @default("Commander maintenant")
+  titleText        String   @default("Commande rapide")
+  
+  // Paramètres avancés
+  enablePixels     Boolean  @default(false)
+  facebookPixel    String?
+  googlePixel      String?
+  
+  // Timestamps
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  @@map("cod_settings")
+}
+
+// Tarifs de livraison
+model DeliveryRate {
+  id          String   @id @default(cuid())
+  shop        String
+  
+  // Géographie
+  country     String
+  region      String?
+  city        String?
+  
+  // Tarification
+  price       Decimal  @db.Decimal(10,2)
+  currency    String   @default("MAD")
+  
+  // Configuration
+  active      Boolean  @default(true)
+  minOrder    Decimal? @db.Decimal(10,2)
+  maxOrder    Decimal? @db.Decimal(10,2)
+  
+  // Timestamps  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("delivery_rates")
+  @@index([shop])
+  @@index([country])
+  @@unique([shop, country, region, city])
+}
+
+// Statistiques
+model CodAnalytics {
+  id              String   @id @default(cuid())
+  shop            String
+  date            DateTime
+  
+  // Métriques principales
+  totalOrders     Int      @default(0)
+  confirmedOrders Int      @default(0)
+  deliveredOrders Int      @default(0)
+  cancelledOrders Int      @default(0)
+  
+  // Métriques financières
+  totalRevenue    Decimal  @default(0) @db.Decimal(10,2)
+  averageOrder    Decimal  @default(0) @db.Decimal(10,2)
+  
+  // Métriques de performance
+  conversionRate  Decimal  @default(0) @db.Decimal(5,2)
+  deliveryRate    Decimal  @default(0) @db.Decimal(5,2)
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("cod_analytics")
+  @@unique([shop, date])
+  @@index([shop])
+  @@index([date])
+}
