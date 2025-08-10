@@ -1,9 +1,7 @@
 // rt-cod-boost-2-0/app/models/cod.server.js
-// Adapté depuis votre rt-cod-boost/index.js existant
+// Version corrigée avec les bons noms de tables
 
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../db.server";
 
 // ===============================
 // 🚀 FONCTIONS COD ADAPTÉES
@@ -20,27 +18,33 @@ export async function createCodOrder({
   customerCity,
   customerWilaya,
   productName,
+  productId,
   productPrice,
   quantity,
   totalAmount,
   shopifyOrderId = null,
-  status = "pending"
+  status = "pending",
+  source = "widget",
+  shop = "unknown"
 }) {
   try {
-    const codOrder = await prisma.codOrder.create({
+    const codOrder = await prisma.cod_orders.create({
       data: {
         customerName,
         customerPhone,
-        customerEmail,
+        customerEmail: customerEmail || '',
         customerAddress,
-        customerCity,
-        customerWilaya,
-        productName,
-        productPrice: parseFloat(productPrice),
-        quantity: parseInt(quantity),
-        totalAmount: parseFloat(totalAmount),
+        customerCity: customerCity || '',
+        customerWilaya: customerWilaya || '',
+        productName: productName || 'Produit',
+        productId: productId || '',
+        productPrice: parseFloat(productPrice) || 0,
+        quantity: parseInt(quantity) || 1,
+        totalAmount: parseFloat(totalAmount) || parseFloat(productPrice) || 0,
         shopifyOrderId,
         status,
+        source,
+        shop,
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -70,9 +74,10 @@ export async function getCodOrders(filters = {}) {
       if (dateTo) where.createdAt.lte = new Date(dateTo);
     }
 
-    const orders = await prisma.codOrder.findMany({
+    const orders = await prisma.cod_orders.findMany({
       where,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: 100 // Limiter pour performance
     });
 
     return { success: true, orders };
@@ -87,7 +92,7 @@ export async function getCodOrders(filters = {}) {
  */
 export async function updateCodOrderStatus(orderId, newStatus) {
   try {
-    const updatedOrder = await prisma.codOrder.update({
+    const updatedOrder = await prisma.cod_orders.update({
       where: { id: parseInt(orderId) },
       data: { 
         status: newStatus,
@@ -109,7 +114,7 @@ export async function updateCodOrderStatus(orderId, newStatus) {
 export async function createShopifyOrderFromCod(admin, codOrderId) {
   try {
     // Récupérer la commande COD
-    const codOrder = await prisma.codOrder.findUnique({
+    const codOrder = await prisma.cod_orders.findUnique({
       where: { id: parseInt(codOrderId) }
     });
 
@@ -117,63 +122,69 @@ export async function createShopifyOrderFromCod(admin, codOrderId) {
       throw new Error("Commande COD introuvable");
     }
 
-    // Créer la commande Shopify
-    const shopifyOrder = await admin.rest.resources.Order.save({
-      session: admin.session,
+    // Créer la commande Shopify via l'API REST
+    const shopifyOrder = new admin.rest.Order({session: admin.session});
+    
+    shopifyOrder.email = codOrder.customerEmail;
+    shopifyOrder.financial_status = "pending";
+    shopifyOrder.fulfillment_status = null;
+    shopifyOrder.send_receipt = true;
+    shopifyOrder.send_fulfillment_receipt = true;
+    shopifyOrder.note = `Commande COD #${codOrder.id} - ${codOrder.customerWilaya || 'Maroc'}`;
+    shopifyOrder.tags = "COD, Paiement à la livraison";
+    
+    shopifyOrder.customer = {
+      first_name: codOrder.customerName.split(' ')[0],
+      last_name: codOrder.customerName.split(' ').slice(1).join(' ') || '',
       email: codOrder.customerEmail,
-      financial_status: "pending",
-      fulfillment_status: null,
-      send_receipt: true,
-      send_fulfillment_receipt: true,
-      note: `Commande COD #${codOrder.id} - ${codOrder.customerWilaya}`,
-      tags: "COD, Algérie",
-      customer: {
-        first_name: codOrder.customerName.split(' ')[0],
-        last_name: codOrder.customerName.split(' ').slice(1).join(' '),
-        email: codOrder.customerEmail,
-        phone: codOrder.customerPhone
-      },
-      billing_address: {
-        first_name: codOrder.customerName.split(' ')[0],
-        last_name: codOrder.customerName.split(' ').slice(1).join(' '),
-        address1: codOrder.customerAddress,
-        city: codOrder.customerCity,
-        province: codOrder.customerWilaya,
-        country: "Algeria",
-        phone: codOrder.customerPhone
-      },
-      shipping_address: {
-        first_name: codOrder.customerName.split(' ')[0],
-        last_name: codOrder.customerName.split(' ').slice(1).join(' '),
-        address1: codOrder.customerAddress,
-        city: codOrder.customerCity,
-        province: codOrder.customerWilaya,
-        country: "Algeria",
-        phone: codOrder.customerPhone
-      },
-      line_items: [
-        {
-          title: codOrder.productName,
-          price: codOrder.productPrice.toString(),
-          quantity: codOrder.quantity,
-          requires_shipping: true
-        }
-      ],
-      transactions: [
-        {
-          kind: "sale",
-          status: "pending",
-          amount: codOrder.totalAmount.toString(),
-          gateway: "COD"
-        }
-      ]
-    });
+      phone: codOrder.customerPhone
+    };
+    
+    shopifyOrder.billing_address = {
+      first_name: codOrder.customerName.split(' ')[0],
+      last_name: codOrder.customerName.split(' ').slice(1).join(' ') || '',
+      address1: codOrder.customerAddress,
+      city: codOrder.customerCity,
+      province: codOrder.customerWilaya,
+      country: "MA", // Morocco
+      phone: codOrder.customerPhone
+    };
+    
+    shopifyOrder.shipping_address = {
+      first_name: codOrder.customerName.split(' ')[0],
+      last_name: codOrder.customerName.split(' ').slice(1).join(' ') || '',
+      address1: codOrder.customerAddress,
+      city: codOrder.customerCity,
+      province: codOrder.customerWilaya,
+      country: "MA", // Morocco
+      phone: codOrder.customerPhone
+    };
+    
+    shopifyOrder.line_items = [
+      {
+        title: codOrder.productName,
+        price: codOrder.productPrice.toString(),
+        quantity: codOrder.quantity,
+        requires_shipping: true
+      }
+    ];
+    
+    shopifyOrder.transactions = [
+      {
+        kind: "sale",
+        status: "pending",
+        amount: codOrder.totalAmount.toString(),
+        gateway: "COD"
+      }
+    ];
+
+    await shopifyOrder.save({update: true});
 
     // Mettre à jour la commande COD avec l'ID Shopify
-    await prisma.codOrder.update({
+    await prisma.cod_orders.update({
       where: { id: parseInt(codOrderId) },
       data: { 
-        shopifyOrderId: shopifyOrder.id.toString(),
+        shopifyOrderId: shopifyOrder.id?.toString(),
         status: "converted",
         updatedAt: new Date()
       }
@@ -198,14 +209,21 @@ export async function getCodStats() {
       convertedOrders,
       totalRevenue
     ] = await Promise.all([
-      prisma.codOrder.count(),
-      prisma.codOrder.count({ where: { status: "pending" } }),
-      prisma.codOrder.count({ where: { status: "converted" } }),
-      prisma.codOrder.aggregate({
+      prisma.cod_orders.count(),
+      prisma.cod_orders.count({ where: { status: "pending" } }),
+      prisma.cod_orders.count({ where: { status: "converted" } }),
+      prisma.cod_orders.aggregate({
         _sum: { totalAmount: true },
         where: { status: "converted" }
       })
     ]);
+
+    // Stats par wilaya
+    const ordersByWilaya = await prisma.cod_orders.groupBy({
+      by: ['customerWilaya'],
+      _count: { _all: true },
+      _sum: { totalAmount: true }
+    });
 
     return {
       success: true,
@@ -213,7 +231,8 @@ export async function getCodStats() {
         totalOrders,
         pendingOrders,
         convertedOrders,
-        totalRevenue: totalRevenue._sum.totalAmount || 0
+        totalRevenue: totalRevenue._sum.totalAmount || 0,
+        ordersByWilaya
       }
     };
   } catch (error) {
