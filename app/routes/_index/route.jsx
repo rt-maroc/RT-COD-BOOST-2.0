@@ -1,55 +1,25 @@
-import { redirect } from "@remix-run/node";
-import { Form, useLoaderData } from "@remix-run/react";
-import { login } from "../../shopify.server";
-import styles from "./styles.module.css";
+// 🚀 SOLUTION ALTERNATIVE: app/routes/_index/route.jsx
+// Si l'import précédent ne fonctionne pas
+
+import { authenticate } from "../../shopify.server";
+import { json } from "@remix-run/node";
+
+// Essayez ce chemin d'import
+import RTCodBoostDashboard from "../app._index";
+
+// Ou cette version si les autres ne marchent pas :
+// import RTCodBoostDashboard from "../../app._index.jsx";
 
 export const loader = async ({ request }) => {
-  const url = new URL(request.url);
-
-  if (url.searchParams.get("shop")) {
-    throw redirect(`/app?${url.searchParams.toString()}`);
+  try {
+    console.log("🔄 Loading RT COD BOOST 2.0 Dashboard...");
+    await authenticate.admin(request);
+    console.log("✅ Authentication successful");
+    return json({ success: true });
+  } catch (error) {
+    console.error("❌ Authentication failed:", error);
+    throw new Response("Unauthorized", { status: 401 });
   }
-
-  return { showForm: Boolean(login) };
 };
 
-export default function App() {
-  const { showForm } = useLoaderData();
-
-  return (
-    <div className={styles.index}>
-      <div className={styles.content}>
-        <h1 className={styles.heading}>A short heading about [your app]</h1>
-        <p className={styles.text}>
-          A tagline about [your app] that describes your value proposition.
-        </p>
-        {showForm && (
-          <Form className={styles.form} method="post" action="/auth/login">
-            <label className={styles.label}>
-              <span>Shop domain</span>
-              <input className={styles.input} type="text" name="shop" />
-              <span>e.g: my-shop-domain.myshopify.com</span>
-            </label>
-            <button className={styles.button} type="submit">
-              Log in
-            </button>
-          </Form>
-        )}
-        <ul className={styles.list}>
-          <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
-          </li>
-          <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
-          </li>
-          <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
-          </li>
-        </ul>
-      </div>
-    </div>
-  );
-}
+export default RTCodBoostDashboard;
