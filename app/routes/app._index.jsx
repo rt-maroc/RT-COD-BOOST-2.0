@@ -2468,151 +2468,154 @@ const Dashboard = () => {
 
         {/* Application Status */}
         <div className="hover-card" style={{ 
-          marginBottom: '2rem',
-          background: embedStatus ? 
-            'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)' : 
-            'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-          borderRadius: '20px', 
-          padding: '2rem',
-          border: `3px solid ${embedStatus ? '#10b981' : '#f59e0b'}`,
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-          position: 'relative',
-          overflow: 'hidden'
+  marginBottom: '2rem',
+  background: embedStatus ? 
+    'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)' : 
+    'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+  borderRadius: '20px', 
+  padding: '2rem',
+  border: `3px solid ${embedStatus ? '#10b981' : '#f59e0b'}`,
+  boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+  position: 'relative',
+  overflow: 'hidden'
+}}>
+  <div style={{
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: '200px',
+    height: '200px',
+    background: embedStatus ? 
+      'radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%)' :
+      'radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 70%)',
+    borderRadius: '50%'
+  }} />
+  
+  <div style={{ 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    position: 'relative',
+    zIndex: 1
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+      <div className="pulse-icon" style={{ 
+        fontSize: '3rem',
+        background: 'white',
+        padding: '1rem',
+        borderRadius: '20px',
+        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '70px',
+        height: '70px'
+      }}>
+        {embedStatus ? '✅' : '⚠️'}
+      </div>
+      <div>
+        <h3 style={{ 
+          margin: 0, 
+          color: '#1e293b', 
+          fontSize: '1.3rem',
+          fontWeight: 'bold'
         }}>
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: '200px',
-            height: '200px',
-            background: embedStatus ? 
-              'radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%)' :
-              'radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 70%)',
-            borderRadius: '50%'
-          }} />
+          {embedStatus ? 
+            "Application activée avec succès!" : 
+            "Action requise: Activez l'application"}
+        </h3>
+        <p style={{ 
+          margin: '0.5rem 0 0 0', 
+          color: '#475569',
+          fontSize: '1rem'
+        }}>
+          {embedStatus ? 
+            'Votre formulaire COD est maintenant visible sur votre boutique' : 
+            'Dernière étape pour commencer à recevoir des commandes'}
+        </p>
+      </div>
+    </div>
+    
+    {/* ✅ UN SEUL BOUTON AVEC LA BONNE API */}
+    {!embedStatus && (
+      <button 
+        onClick={async () => {
+          setEmbedStatus('installing'); // État de chargement
           
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            position: 'relative',
-            zIndex: 1
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-              <div className="pulse-icon" style={{ 
-                fontSize: '3rem',
-                background: 'white',
-                padding: '1rem',
-                borderRadius: '20px',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '70px',
-                height: '70px'
-              }}>
-                {embedStatus ? '✅' : '⚠️'}
-              </div>
-              <div>
-                <h3 style={{ 
-                  margin: 0, 
-                  color: '#1e293b', 
-                  fontSize: '1.3rem',
-                  fontWeight: 'bold'
-                }}>
-                  {embedStatus ? 
-                    "Application activee avec succes!" : 
-                    "Action requise: Activez l'application"}
-                </h3>
-                <p style={{ 
-                  margin: '0.5rem 0 0 0', 
-                  color: '#475569',
-                  fontSize: '1rem'
-                }}>
-                  {embedStatus ? 
-                    'Votre formulaire COD est maintenant visible sur votre boutique' : 
-                    'Derniere etape pour commencer a recevoir des commandes'}
-                </p>
-              </div>
-            </div>
-            {!embedStatus && (
-              <button 
-                onClick={() => setEmbedStatus(true)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.boxShadow = '0 20px 40px rgba(245, 158, 11, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = '0 10px 25px rgba(245, 158, 11, 0.3)';
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '1rem 2rem',
-                  borderRadius: '12px',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  boxShadow: '0 10px 25px rgba(245, 158, 11, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  transition: 'all 0.3s ease',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                <button 
-  onClick={async () => {
-    setEmbedStatus('installing'); // État de chargement
-    
-    const formData = new FormData();
-    formData.append('action', 'install');
-    
-    try {
-      const response = await fetch('/api/cod-install', {
-        method: 'POST', 
-        body: formData
-      });
-      const result = await response.json();
-      
-      if (result.success) {
-        setEmbedStatus(true);
-        alert('✅ Formulaire installé avec succès!');
-      } else {
-        alert('❌ Erreur: ' + result.error);
-        setEmbedStatus(false);
-      }
-    } catch (error) {
-      alert('❌ Erreur: ' + error.message);
-      setEmbedStatus(false);
-    }
-  }}
-  style={{
-    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-    color: 'white',
-    border: 'none',
-    padding: '1rem 2rem',
-    borderRadius: '12px',
-    fontSize: '1rem',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    boxShadow: '0 10px 25px rgba(245, 158, 11, 0.3)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    transition: 'all 0.3s ease',
-    whiteSpace: 'nowrap'
-  }}
->
-  <span style={{ fontSize: '1.3rem' }}>⚡</span>
-  Activer maintenant
-</button>
-              </button>
-            )}
-          </div>
-        </div>
+          try {
+            console.log('🚀 Début activation COD...');
+            
+            // ✅ NOUVELLE API : /api/activate (plus /api/cod-install)
+            const response = await fetch('/api/activate', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ 
+                isActive: true 
+              }),
+            });
+
+            console.log('📡 Réponse API:', response.status, response.statusText);
+            
+            if (!response.ok) {
+              throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('📋 Données reçues:', data);
+
+            if (data.success) {
+              // Succès - Mettre à jour l'état
+              setEmbedStatus(true);
+              
+              // Afficher un message de succès
+              alert('✅ Application activée avec succès ! Le formulaire COD est maintenant visible sur votre boutique.');
+              
+              console.log('✅ Activation réussie - Script Tag ID:', data.scriptTagId);
+              
+            } else {
+              // Échec avec message d'erreur
+              throw new Error(data.message || 'Erreur inconnue');
+            }
+
+          } catch (error) {
+            console.error('❌ Erreur activation:', error);
+            alert('❌ Erreur: ' + error.message);
+            setEmbedStatus(false);
+          }
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.05)';
+          e.currentTarget.style.boxShadow = '0 20px 40px rgba(245, 158, 11, 0.4)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 10px 25px rgba(245, 158, 11, 0.3)';
+        }}
+        style={{
+          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+          color: 'white',
+          border: 'none',
+          padding: '1rem 2rem',
+          borderRadius: '12px',
+          fontSize: '1rem',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          boxShadow: '0 10px 25px rgba(245, 158, 11, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          transition: 'all 0.3s ease',
+          whiteSpace: 'nowrap'
+        }}
+      >
+        <span style={{ fontSize: '1.3rem' }}>⚡</span>
+        {embedStatus === 'installing' ? 'Activation...' : 'Activer maintenant'}
+      </button>
+    )}
+  </div>
+</div>
 
         {/* Installation Guide */}
         <div style={{ 
