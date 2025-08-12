@@ -4,34 +4,30 @@ import db from "../db.server";
 
 export const action = async ({ request }) => {
   try {
-    // Authentification et récupération des données en une seule fois
     const { admin, session } = await authenticate.admin(request);
     
     const body = await request.json();
     const { isActive } = body;
     
     console.log('🔄 Requête activation reçue:', { isActive });
-    console.log('🔍 Session shop:', session?.shop);
+    console.log('🏪 Shop:', session?.shop);
     
     const shop = session?.shop;
     
     if (!shop) {
+      console.error('❌ Aucun shop trouvé dans la session');
       return json({ error: "Shop non trouvé dans la session" }, { status: 400 });
     }
-    
-    console.log('🔄 Activation de l\'app pour', shop);
 
     if (isActive) {
       // === ACTIVATION : CRÉER LE SCRIPT TAG ===
-      
-      // URL du script COD
       const scriptUrl = `${process.env.SHOPIFY_APP_URL || 'https://rt-cod-boost-2-0.onrender.com'}/cod-form.js`;
       
       console.log('📝 Création du Script Tag avec URL:', scriptUrl);
       
       try {
         const scriptTag = await admin.rest.resources.ScriptTag.save({
-          session: session,
+          session,
           src: scriptUrl,
           event: 'onload',
           display_scope: 'all'
@@ -54,7 +50,7 @@ export const action = async ({ request }) => {
           }
         });
         
-        console.log('✅ Paramètres sauvegardés dans la base');
+        console.log('✅ Paramètres sauvegardés en base');
         
         return json({ 
           success: true, 
@@ -71,9 +67,7 @@ export const action = async ({ request }) => {
       }
       
     } else {
-      // === DÉSACTIVATION : SUPPRIMER LE SCRIPT TAG ===
-      
-      // Récupérer le scriptTagId depuis la base
+      // === DÉSACTIVATION ===
       const settings = await db.cod_settings.findUnique({
         where: { shop }
       });
@@ -81,7 +75,7 @@ export const action = async ({ request }) => {
       if (settings?.scriptTagId) {
         try {
           await admin.rest.resources.ScriptTag.delete({
-            session: session,
+            session,
             id: parseInt(settings.scriptTagId)
           });
           
@@ -91,7 +85,6 @@ export const action = async ({ request }) => {
         }
       }
       
-      // Mettre à jour la base de données
       await db.cod_settings.upsert({
         where: { shop },
         update: {
@@ -115,13 +108,12 @@ export const action = async ({ request }) => {
   } catch (error) {
     console.error('❌ Erreur API activation:', error);
     return json({ 
-      error: "Erreur serveur", 
+      error: "Erreur d'authentification", 
       details: error.message 
     }, { status: 500 });
   }
 };
 
-// GET : Récupérer le statut d'activation
 export const loader = async ({ request }) => {
   try {
     const { session } = await authenticate.admin(request);
@@ -131,18 +123,4 @@ export const loader = async ({ request }) => {
       return json({ error: "Shop non trouvé" }, { status: 400 });
     }
     
-    const settings = await db.cod_settings.findUnique({
-      where: { shop }
-    });
-    
-    return json({
-      isActive: settings?.isActive || false,
-      scriptTagId: settings?.scriptTagId,
-      shop
-    });
-    
-  } catch (error) {
-    console.error('❌ Erreur GET status:', error);
-    return json({ error: "Erreur serveur" }, { status: 500 });
-  }
-};
+    const settings = await db.cod_settings.findUniq
