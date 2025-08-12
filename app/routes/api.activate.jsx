@@ -123,4 +123,18 @@ export const loader = async ({ request }) => {
       return json({ error: "Shop non trouvé" }, { status: 400 });
     }
     
-    const settings = await db.cod_settings.findUniq
+    const settings = await db.cod_settings.findUnique({
+      where: { shop }
+    });
+    
+    return json({
+      isActive: settings?.isActive || false,
+      scriptTagId: settings?.scriptTagId,
+      shop
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur GET status:', error);
+    return json({ error: "Erreur serveur" }, { status: 500 });
+  }
+};
