@@ -41,22 +41,40 @@ export const action = async ({ request }) => {
       
       try {
         // Récupérer le token d'accès depuis la base de données sessions
-        const sessionRecord = await db.session.findFirst({
+        console.log('🔍 Recherche session pour:', { shop, session });
+        
+        let sessionRecord = await db.session.findFirst({
           where: { 
             shop: shop,
             id: session 
           }
         });
         
+        // Si pas trouvé avec l'ID exact, chercher par shop seulement
         if (!sessionRecord) {
-          console.log('❌ Session non trouvée en base');
+          console.log('🔍 Tentative recherche par shop uniquement...');
+          sessionRecord = await db.session.findFirst({
+            where: { shop: shop },
+            orderBy: { updatedAt: 'desc' }
+          });
+        }
+        
+        if (!sessionRecord) {
+          console.log('❌ Aucune session trouvée pour ce shop');
+          
+          // Debug: lister toutes les sessions
+          const allSessions = await db.session.findMany({
+            select: { id: true, shop: true, updatedAt: true }
+          });
+          console.log('📋 Sessions disponibles:', allSessions);
+          
           return json({
             success: false,
             message: 'Session non trouvée'
           }, { status: 401 });
         }
         
-        console.log('📋 Session trouvée:', sessionRecord.id);
+        console.log('✅ Session trouvée:', { id: sessionRecord.id, shop: sessionRecord.shop });
         
         // Faire l'appel direct à Shopify
         const response = await fetch(shopifyApiUrl, {
