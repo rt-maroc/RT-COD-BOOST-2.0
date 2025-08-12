@@ -16,7 +16,7 @@ export const action = async ({ request }) => {
       
       const fakeScriptTagId = Date.now().toString();
       
-      await db.cod_settings.upsert({
+      await db.CodSettings.upsert({
         where: { shop },
         update: {
           isActive: true,
@@ -36,7 +36,7 @@ export const action = async ({ request }) => {
         scriptTagId: fakeScriptTagId
       });
     } else {
-      await db.cod_settings.upsert({
+      await db.CodSettings.upsert({
         where: { shop },
         update: {
           isActive: false,
@@ -67,7 +67,7 @@ export const loader = async ({ request }) => {
   try {
     const shop = 'rt-solutions-test.myshopify.com';
     
-    const settings = await db.cod_settings.findUnique({
+    const settings = await db.CodSettings.findUnique({
       where: { shop }
     });
 
