@@ -4,137 +4,128 @@ import db from "../db.server";
 
 export const action = async ({ request }) => {
   try {
+    console.log('🚀 API activate called');
+    
     const { admin, session } = await authenticate.admin(request);
     
-    const body = await request.json();
-    const { isActive } = body;
+    console.log('✅ Auth réussie pour shop:', session.shop);
     
-    console.log('🔄 Requête activation reçue:', { isActive });
-    console.log('🏪 Shop:', session?.shop);
+    // Récupérer les données de la requête
+    const requestData = await request.json();
+    console.log('📋 Request data:', requestData);
     
-    const shop = session?.shop;
+    const { isActive } = requestData;
     
-    if (!shop) {
-      console.error('❌ Aucun shop trouvé dans la session');
-      return json({ error: "Shop non trouvé dans la session" }, { status: 400 });
-    }
-
     if (isActive) {
-      // === ACTIVATION : CRÉER LE SCRIPT TAG ===
-      const scriptUrl = `${process.env.SHOPIFY_APP_URL || 'https://rt-cod-boost-2-0.onrender.com'}/cod-form.js`;
+      console.log('📲 Activation demandée...');
       
-      console.log('📝 Création du Script Tag avec URL:', scriptUrl);
-      
-      try {
-        const scriptTag = await admin.rest.resources.ScriptTag.save({
-          session,
-          src: scriptUrl,
+      // 1. Créer le Script Tag dans Shopify
+      const scriptTagData = {
+        script_tag: {
           event: 'onload',
-          display_scope: 'all'
-        });
-        
-        console.log('✅ Script Tag créé avec ID:', scriptTag.id);
-        
-        // Sauvegarder dans la base de données
-        await db.cod_settings.upsert({
-          where: { shop },
-          update: {
-            isActive: true,
-            scriptTagId: scriptTag.id.toString(),
-            updatedAt: new Date()
-          },
-          create: {
-            shop,
-            isActive: true,
-            scriptTagId: scriptTag.id.toString()
-          }
-        });
-        
-        console.log('✅ Paramètres sauvegardés en base');
-        
-        return json({ 
-          success: true, 
-          message: "App activée avec succès!",
-          scriptTagId: scriptTag.id
-        });
-        
-      } catch (scriptError) {
-        console.error('❌ Erreur création Script Tag:', scriptError);
-        return json({ 
-          error: "Erreur lors de la création du script", 
-          details: scriptError.message 
-        }, { status: 500 });
-      }
+          src: 'https://rt-cod-boost-2-0.onrender.com/cod-form.js',
+          display_scope: 'online_store'
+        }
+      };
       
-    } else {
-      // === DÉSACTIVATION ===
-      const settings = await db.cod_settings.findUnique({
-        where: { shop }
+      console.log('🔧 Création Script Tag...');
+      
+      const scriptResponse = await admin.rest.resources.ScriptTag.save({
+        session,
+        ...scriptTagData
       });
       
-      if (settings?.scriptTagId) {
-        try {
-          await admin.rest.resources.ScriptTag.delete({
-            session,
-            id: parseInt(settings.scriptTagId)
-          });
-          
-          console.log('✅ Script Tag supprimé:', settings.scriptTagId);
-        } catch (deleteError) {
-          console.warn('⚠️ Erreur suppression Script Tag:', deleteError.message);
-        }
-      }
+      console.log('✅ Script Tag créé:', scriptResponse.id);
       
-      await db.cod_settings.upsert({
-        where: { shop },
+      // 2. Sauvegarder en base de données
+      const settings = await db.cod_settings.upsert({
+        where: { shop: session.shop },
         update: {
-          isActive: false,
-          scriptTagId: null,
+          isActive: true,
+          scriptTagId: scriptResponse.id.toString(),
           updatedAt: new Date()
         },
         create: {
-          shop,
-          isActive: false,
-          scriptTagId: null
+          shop: session.shop,
+          isActive: true,
+          scriptTagId: scriptResponse.id.toString(),
+          totalOrders: 0,
+          totalRevenue: 0
         }
       });
       
-      return json({ 
-        success: true, 
-        message: "App désactivée avec succès!"
+      console.log('💾 Settings saved:', settings);
+      
+      return json({
+        success: true,
+        message: 'Application activée avec succès !',
+        scriptTagId: scriptResponse.id,
+        isActive: true
+      });
+      
+    } else {
+      // Désactivation
+      console.log('⏹️ Désactivation demandée...');
+      
+      // Récupérer les settings actuels
+      const currentSettings = await db.cod_settings.findUnique({
+        where: { shop: session.shop }
+      });
+      
+      if (currentSettings?.scriptTagId) {
+        // Supprimer le Script Tag
+        await admin.rest.resources.ScriptTag.delete({
+          session,
+          id: currentSettings.scriptTagId
+        });
+        
+        console.log('🗑️ Script Tag supprimé');
+      }
+      
+      // Mettre à jour en base
+      await db.cod_settings.update({
+        where: { shop: session.shop },
+        data: {
+          isActive: false,
+          scriptTagId: null,
+          updatedAt: new Date()
+        }
+      });
+      
+      return json({
+        success: true,
+        message: 'Application désactivée',
+        isActive: false
       });
     }
     
   } catch (error) {
     console.error('❌ Erreur API activation:', error);
-    return json({ 
-      error: "Erreur d'authentification", 
-      details: error.message 
+    
+    return json({
+      success: false,
+      message: error.message || 'Erreur inconnue',
+      error: error.toString()
     }, { status: 500 });
   }
 };
 
+// GET pour récupérer le statut
 export const loader = async ({ request }) => {
   try {
     const { session } = await authenticate.admin(request);
-    const shop = session?.shop;
-    
-    if (!shop) {
-      return json({ error: "Shop non trouvé" }, { status: 400 });
-    }
     
     const settings = await db.cod_settings.findUnique({
-      where: { shop }
+      where: { shop: session.shop }
     });
     
     return json({
       isActive: settings?.isActive || false,
-      scriptTagId: settings?.scriptTagId,
-      shop
+      scriptTagId: settings?.scriptTagId || null
     });
     
   } catch (error) {
-    console.error('❌ Erreur GET status:', error);
-    return json({ error: "Erreur serveur" }, { status: 500 });
+    console.error('❌ Erreur loader:', error);
+    return json({ isActive: false }, { status: 500 });
   }
 };
