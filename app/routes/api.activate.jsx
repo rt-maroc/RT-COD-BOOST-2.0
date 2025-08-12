@@ -4,16 +4,16 @@ import db from "../db.server";
 
 export const action = async ({ request }) => {
   try {
-    const { admin } = await authenticate.admin(request);
+    // Authentification et récupération des données en une seule fois
+    const { admin, session } = await authenticate.admin(request);
     
     const body = await request.json();
     const { isActive } = body;
     
     console.log('🔄 Requête activation reçue:', { isActive });
+    console.log('🔍 Session shop:', session?.shop);
     
-    // Récupérer les informations de session
-    const session = await authenticate.admin(request);
-    const shop = session.session?.shop;
+    const shop = session?.shop;
     
     if (!shop) {
       return json({ error: "Shop non trouvé dans la session" }, { status: 400 });
@@ -31,7 +31,7 @@ export const action = async ({ request }) => {
       
       try {
         const scriptTag = await admin.rest.resources.ScriptTag.save({
-          session: session.session,
+          session: session,
           src: scriptUrl,
           event: 'onload',
           display_scope: 'all'
@@ -81,7 +81,7 @@ export const action = async ({ request }) => {
       if (settings?.scriptTagId) {
         try {
           await admin.rest.resources.ScriptTag.delete({
-            session: session.session,
+            session: session,
             id: parseInt(settings.scriptTagId)
           });
           
@@ -124,8 +124,8 @@ export const action = async ({ request }) => {
 // GET : Récupérer le statut d'activation
 export const loader = async ({ request }) => {
   try {
-    const session = await authenticate.admin(request);
-    const shop = session.session?.shop;
+    const { session } = await authenticate.admin(request);
+    const shop = session?.shop;
     
     if (!shop) {
       return json({ error: "Shop non trouvé" }, { status: 400 });
