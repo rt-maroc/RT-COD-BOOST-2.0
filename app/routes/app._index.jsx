@@ -2544,18 +2544,58 @@ const Dashboard = () => {
           
           try {
             console.log('🚀 Début activation COD...');
-            
-            // ✅ NOUVELLE API : /api/activate (plus /api/cod-install)
-            const response = await fetch('/api/activate', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ 
-                isActive: true 
-              }),
-            });
+            setEmbedStatus('installing');
+  
+  try {
+    console.log('🚀 Début activation COD...');
+    
+    // 🔑 SOLUTION : Récupérer les paramètres d'auth de l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const shop = urlParams.get('shop');
+    const host = urlParams.get('host');
+    const session = urlParams.get('session');
+    
+    console.log('📋 Paramètres auth:', { shop, host, session });
+    
+    // ✅ NOUVELLE APPROCHE : Inclure les paramètres d'auth dans l'URL
+    const apiUrl = `/api/activate?shop=${encodeURIComponent(shop || '')}&host=${encodeURIComponent(host || '')}&session=${encodeURIComponent(session || '')}`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Ajouter les headers d'auth si disponibles
+        ...(shop && { 'X-Shopify-Shop-Domain': shop }),
+        ...(session && { 'X-Shopify-Session': session })
+      },
+      body: JSON.stringify({ 
+        isActive: true 
+      }),
+    });
 
+    console.log('📡 Réponse API:', response.status, response.statusText);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur HTTP: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('📋 Données reçues:', data);
+
+    if (data.success) {
+      setEmbedStatus(true);
+      alert('✅ Application activée avec succès ! Le formulaire COD est maintenant visible sur votre boutique.');
+      console.log('✅ Activation réussie - Script Tag ID:', data.scriptTagId);
+    } else {
+      throw new Error(data.message || 'Erreur inconnue');
+    }
+
+  } catch (error) {
+    console.error('❌ Erreur activation:', error);
+    alert('❌ Erreur: ' + error.message);
+    setEmbedStatus(false);
+  }
             console.log('📡 Réponse API:', response.status, response.statusText);
             
             if (!response.ok) {
