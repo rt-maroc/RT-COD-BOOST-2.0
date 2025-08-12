@@ -2540,16 +2540,12 @@ const Dashboard = () => {
     {!embedStatus && (
       <button 
         onClick={async () => {
-          setEmbedStatus('installing'); // État de chargement
-          
-          try {
-            console.log('🚀 Début activation COD...');
-            setEmbedStatus('installing');
+  setEmbedStatus('installing');
   
   try {
     console.log('🚀 Début activation COD...');
     
-    // 🔑 SOLUTION : Récupérer les paramètres d'auth de l'URL
+    // Récupérer les paramètres d'auth de l'URL
     const urlParams = new URLSearchParams(window.location.search);
     const shop = urlParams.get('shop');
     const host = urlParams.get('host');
@@ -2557,14 +2553,13 @@ const Dashboard = () => {
     
     console.log('📋 Paramètres auth:', { shop, host, session });
     
-    // ✅ NOUVELLE APPROCHE : Inclure les paramètres d'auth dans l'URL
+    // Appel API avec authentification
     const apiUrl = `/api/activate?shop=${encodeURIComponent(shop || '')}&host=${encodeURIComponent(host || '')}&session=${encodeURIComponent(session || '')}`;
     
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Ajouter les headers d'auth si disponibles
         ...(shop && { 'X-Shopify-Shop-Domain': shop }),
         ...(session && { 'X-Shopify-Session': session })
       },
@@ -2596,62 +2591,34 @@ const Dashboard = () => {
     alert('❌ Erreur: ' + error.message);
     setEmbedStatus(false);
   }
-            console.log('📡 Réponse API:', response.status, response.statusText);
-            
-            if (!response.ok) {
-              throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            console.log('📋 Données reçues:', data);
-
-            if (data.success) {
-              // Succès - Mettre à jour l'état
-              setEmbedStatus(true);
-              
-              // Afficher un message de succès
-              alert('✅ Application activée avec succès ! Le formulaire COD est maintenant visible sur votre boutique.');
-              
-              console.log('✅ Activation réussie - Script Tag ID:', data.scriptTagId);
-              
-            } else {
-              // Échec avec message d'erreur
-              throw new Error(data.message || 'Erreur inconnue');
-            }
-
-          } catch (error) {
-            console.error('❌ Erreur activation:', error);
-            alert('❌ Erreur: ' + error.message);
-            setEmbedStatus(false);
-          }
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.05)';
-          e.currentTarget.style.boxShadow = '0 20px 40px rgba(245, 158, 11, 0.4)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 10px 25px rgba(245, 158, 11, 0.3)';
-        }}
-        style={{
-          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-          color: 'white',
-          border: 'none',
-          padding: '1rem 2rem',
-          borderRadius: '12px',
-          fontSize: '1rem',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          boxShadow: '0 10px 25px rgba(245, 158, 11, 0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          transition: 'all 0.3s ease',
-          whiteSpace: 'nowrap'
-        }}
-      >
-        <span style={{ fontSize: '1.3rem' }}>⚡</span>
-        {embedStatus === 'installing' ? 'Activation...' : 'Activer maintenant'}
+}}
+onMouseEnter={(e) => {
+  e.currentTarget.style.transform = 'scale(1.05)';
+  e.currentTarget.style.boxShadow = '0 20px 40px rgba(245, 158, 11, 0.4)';
+}}
+onMouseLeave={(e) => {
+  e.currentTarget.style.transform = 'scale(1)';
+  e.currentTarget.style.boxShadow = '0 10px 25px rgba(245, 158, 11, 0.3)';
+}}
+style={{
+  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+  color: 'white',
+  border: 'none',
+  padding: '1rem 2rem',
+  borderRadius: '12px',
+  fontSize: '1rem',
+  fontWeight: 'bold',
+  cursor: 'pointer',
+  boxShadow: '0 10px 25px rgba(245, 158, 11, 0.3)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  transition: 'all 0.3s ease',
+  whiteSpace: 'nowrap'
+}}
+>
+<span style={{ fontSize: '1.3rem' }}>⚡</span>
+{embedStatus === 'installing' ? 'Activation...' : 'Activer maintenant'}
       </button>
     )}
   </div>
