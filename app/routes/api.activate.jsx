@@ -54,8 +54,7 @@ export const action = async ({ request }) => {
         if (!sessionRecord) {
           console.log('🔍 Tentative recherche par shop uniquement...');
           sessionRecord = await db.session.findFirst({
-            where: { shop: shop },
-            orderBy: { updatedAt: 'desc' }
+            where: { shop: shop }
           });
         }
         
