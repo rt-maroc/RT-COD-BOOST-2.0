@@ -1,33 +1,21 @@
 import { json } from "@remix-run/node";
-import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
 export const action = async ({ request }) => {
   try {
-    // Récupérer les données depuis le frontend
     const body = await request.json();
     const { isActive } = body;
     
     console.log('🔄 Requête activation reçue:', { isActive });
     
-    // Pour l'instant, on simule l'activation (on corrigera l'auth Shopify plus tard)
-    const shop = 'rt-solutions-test.myshopify.com'; // Temporaire pour test
-    
+    const shop = 'rt-solutions-test.myshopify.com';
     console.log(`🔄 ${isActive ? 'Activation' : 'Désactivation'} de l'app pour ${shop}`);
-
-    if (method === "POST") {
-      // Activation de l'application
-      const { isActive } = await request.json();
-      
-      console.log(`🔄 ${isActive ? 'Activation' : 'Désactivation'} de l'app pour ${shop}`);
 
     if (isActive) {
       console.log('✅ Simulation activation réussie');
       
-      // Temporairement, on simule la création du Script Tag
       const fakeScriptTagId = Date.now().toString();
       
-      // Sauvegarder dans la base de données
       await db.cod_settings.upsert({
         where: { shop },
         update: {
@@ -47,8 +35,7 @@ export const action = async ({ request }) => {
         message: "Application activée avec succès !",
         scriptTagId: fakeScriptTagId
       });
-        } else {
-      // Désactivation
+    } else {
       await db.cod_settings.upsert({
         where: { shop },
         update: {
@@ -67,8 +54,6 @@ export const action = async ({ request }) => {
         message: "Application désactivée avec succès !"
       });
     }
-    }
-
   } catch (error) {
     console.error("❌ Erreur API activation:", error);
     return json({
@@ -78,10 +63,9 @@ export const action = async ({ request }) => {
   }
 };
 
-// Route GET pour récupérer le statut
 export const loader = async ({ request }) => {
   try {
-    const shop = 'rt-solutions-test.myshopify.com'; // Temporaire
+    const shop = 'rt-solutions-test.myshopify.com';
     
     const settings = await db.cod_settings.findUnique({
       where: { shop }
