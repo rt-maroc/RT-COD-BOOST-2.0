@@ -83,6 +83,8 @@ model CodOrder {
 model CodSettings {
   id               String   @id @default(cuid())
   shop             String   @unique
+  isActive         Boolean  @default(false)
+  scriptTagId      String?
   
   // Configuration formulaire
   formType         String   @default("integrated")
