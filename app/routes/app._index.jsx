@@ -1,5 +1,66 @@
 import { useState, useEffect } from 'react';
-
+import { Form, useActionData, useNavigation } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import { authenticate } from "../shopify.server";
+import db from "../db.server";
+export const action = async ({ request }) => {
+  const formData = await request.formData();
+  const actionType = formData.get("action");
+  
+  if (actionType === "activate") {
+    try {
+      console.log('🚀 Activation via formulaire Remix');
+      
+      const { admin, session } = await authenticate.admin(request);
+      
+      console.log('✅ Auth Remix réussie pour:', session.shop);
+      
+      const isActive = formData.get("isActive") === "true";
+      
+      if (isActive) {
+        const scriptTag = new admin.rest.resources.ScriptTag({ session });
+        scriptTag.event = 'onload';
+        scriptTag.src = 'https://rt-cod-boost-2-0.onrender.com/cod-form.js';
+        scriptTag.display_scope = 'online_store';
+        
+        await scriptTag.save({ update: true });
+        
+        console.log('✅ Script Tag créé avec ID:', scriptTag.id);
+        
+        await db.cod_settings.upsert({
+          where: { shop: session.shop },
+          update: {
+            isActive: true,
+            scriptTagId: scriptTag.id.toString(),
+            updatedAt: new Date()
+          },
+          create: {
+            shop: session.shop,
+            isActive: true,
+            scriptTagId: scriptTag.id.toString(),
+            totalOrders: 0,
+            totalRevenue: 0
+          }
+        });
+        
+        return json({ 
+          success: true, 
+          message: "Application activée avec succès !",
+          scriptTagId: scriptTag.id 
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Erreur activation:', error);
+      return json({ 
+        success: false, 
+        message: "Erreur: " + error.message 
+      }, { status: 500 });
+    }
+  }
+  
+  return json({ success: false, message: "Action inconnue" });
+};
 export default function RTCodBoostDashboard() {
   // États de navigation et language
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -2156,6 +2217,8 @@ const Orders = () => {
 
   // Page Dashboard
 const Dashboard = () => {
+  const navigation = useNavigation();
+  const actionData = useActionData();
   const [embedStatus, setEmbedStatus] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [activeSetupStep, setActiveSetupStep] = useState(1);
@@ -2536,91 +2599,53 @@ const Dashboard = () => {
       </div>
     </div>
     
-    {/* ✅ UN SEUL BOUTON AVEC LA BONNE API */}
-    {!embedStatus && (
-      <button 
-        onClick={async () => {
-  setEmbedStatus('installing');
-  
-  try {
-    console.log('🚀 Début activation COD...');
+    {/* ✅ FORMULAIRE REMIX POUR ACTIVATION */}
+{!embedStatus && (
+  <Form method="post">
+    <input type="hidden" name="action" value="activate" />
+    <input type="hidden" name="isActive" value="true" />
     
-    // Récupérer les paramètres d'auth de l'URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const shop = urlParams.get('shop');
-    const host = urlParams.get('host');
-    const session = urlParams.get('session');
-    
-    console.log('📋 Paramètres auth:', { shop, host, session });
-    
-    // Appel API avec authentification
-    const apiUrl = `/api/activate?shop=${encodeURIComponent(shop || '')}&host=${encodeURIComponent(host || '')}&session=${encodeURIComponent(session || '')}`;
-    
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(shop && { 'X-Shopify-Shop-Domain': shop }),
-        ...(session && { 'X-Shopify-Session': session })
-      },
-      body: JSON.stringify({ 
-        isActive: true 
-      }),
-    });
-
-    console.log('📡 Réponse API:', response.status, response.statusText);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Erreur HTTP: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('📋 Données reçues:', data);
-
-    if (data.success) {
-      setEmbedStatus(true);
-      alert('✅ Application activée avec succès ! Le formulaire COD est maintenant visible sur votre boutique.');
-      console.log('✅ Activation réussie - Script Tag ID:', data.scriptTagId);
-    } else {
-      throw new Error(data.message || 'Erreur inconnue');
-    }
-
-  } catch (error) {
-    console.error('❌ Erreur activation:', error);
-    alert('❌ Erreur: ' + error.message);
-    setEmbedStatus(false);
-  }
-}}
-onMouseEnter={(e) => {
-  e.currentTarget.style.transform = 'scale(1.05)';
-  e.currentTarget.style.boxShadow = '0 20px 40px rgba(245, 158, 11, 0.4)';
-}}
-onMouseLeave={(e) => {
-  e.currentTarget.style.transform = 'scale(1)';
-  e.currentTarget.style.boxShadow = '0 10px 25px rgba(245, 158, 11, 0.3)';
-}}
-style={{
-  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-  color: 'white',
-  border: 'none',
-  padding: '1rem 2rem',
-  borderRadius: '12px',
-  fontSize: '1rem',
-  fontWeight: 'bold',
-  cursor: 'pointer',
-  boxShadow: '0 10px 25px rgba(245, 158, 11, 0.3)',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.5rem',
-  transition: 'all 0.3s ease',
-  whiteSpace: 'nowrap'
-}}
->
-<span style={{ fontSize: '1.3rem' }}>⚡</span>
-{embedStatus === 'installing' ? 'Activation...' : 'Activer maintenant'}
-      </button>
-    )}
+    <button 
+      type="submit"
+      disabled={navigation.state === "submitting"}
+      onMouseEnter={(e) => {
+        if (navigation.state !== "submitting") {
+          e.currentTarget.style.transform = 'scale(1.05)';
+          e.currentTarget.style.boxShadow = '0 20px 40px rgba(245, 158, 11, 0.4)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (navigation.state !== "submitting") {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 10px 25px rgba(245, 158, 11, 0.3)';
+        }
+      }}
+      style={{
+        background: navigation.state === "submitting" 
+          ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+          : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        color: 'white',
+        border: 'none',
+        padding: '1rem 2rem',
+        borderRadius: '12px',
+        fontSize: '1rem',
+        fontWeight: 'bold',
+        cursor: navigation.state === "submitting" ? 'not-allowed' : 'pointer',
+        boxShadow: '0 10px 25px rgba(245, 158, 11, 0.3)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        transition: 'all 0.3s ease',
+        whiteSpace: 'nowrap'
+      }}
+    >
+      <span style={{ fontSize: '1.3rem' }}>
+        {navigation.state === "submitting" ? '⏳' : '⚡'}
+      </span>
+      {navigation.state === "submitting" ? 'Activation...' : 'Activer maintenant'}
+    </button>
+  </Form>
+)}
   </div>
 </div>
 
