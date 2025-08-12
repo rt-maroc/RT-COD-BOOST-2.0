@@ -4,246 +4,234 @@ export default function TestActivation() {
   const [isAppActive, setIsAppActive] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
   const [message, setMessage] = useState('');
-  const [shopInfo, setShopInfo] = useState(null);
 
-  // Vérifier le statut au chargement
+  // Charger le statut au montage du composant
   useEffect(() => {
-    checkActivationStatus();
+    loadActivationStatus();
   }, []);
 
-  const checkActivationStatus = async () => {
+  const loadActivationStatus = async () => {
     try {
-      const response = await fetch('/api/activate');
-      const result = await response.json();
+      const response = await fetch('/api/activate', {
+        method: 'GET',
+      });
+      const data = await response.json();
       
-      if (result.success) {
-        setIsAppActive(result.isActive);
-        setShopInfo({
-          shop: result.shop,
-          totalOrders: result.totalOrders,
-          totalRevenue: result.totalRevenue
-        });
+      if (data.success) {
+        setIsAppActive(data.isActive);
+        setMessage(data.isActive ? 'Application active' : 'Application inactive');
       }
     } catch (error) {
-      console.error('Erreur lors de la vérification du statut:', error);
-      setMessage('❌ Erreur de connexion à l\'API');
+      setMessage('Erreur lors du chargement du statut');
+      console.error(error);
     }
   };
 
   const handleActivation = async () => {
     setIsActivating(true);
     setMessage('');
-    
+
     try {
       const response = await fetch('/api/activate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          isActive: !isAppActive
-        })
+        body: JSON.stringify({ isActive: !isAppActive }),
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        setIsAppActive(result.isActive);
-        setMessage(result.message);
-        
-        // Actualiser les infos
-        setTimeout(checkActivationStatus, 1000);
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsAppActive(!isAppActive);
+        setMessage(data.message);
       } else {
-        throw new Error(result.error || 'Erreur lors de l\'activation');
+        setMessage(`Erreur: ${data.message}`);
       }
-
     } catch (error) {
-      console.error('Erreur d\'activation:', error);
-      setMessage('❌ ' + error.message);
+      setMessage(`Erreur: ${error.message}`);
+      console.error(error);
     } finally {
       setIsActivating(false);
     }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '2rem',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif'
+    <div style={{ 
+      maxWidth: '600px', 
+      margin: '50px auto', 
+      padding: '30px', 
+      fontFamily: 'Arial, sans-serif',
+      backgroundColor: '#f8f9fa',
+      borderRadius: '12px',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
     }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '20px',
-        padding: '3rem',
-        maxWidth: '600px',
-        width: '100%',
-        textAlign: 'center',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.15)'
+      <h1 style={{ 
+        textAlign: 'center', 
+        color: '#333',
+        marginBottom: '30px',
+        fontSize: '28px'
       }}>
-        <h1 style={{
-          fontSize: '2.5rem',
-          fontWeight: 'bold',
-          color: '#1e293b',
-          marginBottom: '1rem'
-        }}>
-          🧪 Test d'Activation
-        </h1>
-        
-        <h2 style={{
-          fontSize: '1.2rem',
-          color: '#64748b',
-          marginBottom: '2rem'
-        }}>
-          RT COD BOOST 2.0
-        </h2>
+        🧪 Test d'Activation - RT COD BOOST 2.0
+      </h1>
 
-        {/* Statut visuel */}
-        <div style={{
-          fontSize: '5rem',
-          marginBottom: '1rem'
+      <div style={{
+        backgroundColor: 'white',
+        padding: '25px',
+        borderRadius: '8px',
+        marginBottom: '25px',
+        border: '1px solid #e9ecef'
+      }}>
+        <h3 style={{ 
+          margin: '0 0 15px 0', 
+          color: '#495057' 
         }}>
-          {isAppActive ? '✅' : '⚠️'}
+          📊 Statut actuel
+        </h3>
+        
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '15px',
+          marginBottom: '15px'
+        }}>
+          <div style={{
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            backgroundColor: isAppActive ? '#28a745' : '#dc3545'
+          }}></div>
+          <span style={{
+            fontSize: '16px',
+            fontWeight: 'bold',
+            color: isAppActive ? '#28a745' : '#dc3545'
+          }}>
+            {isAppActive ? '✅ Application ACTIVE' : '❌ Application INACTIVE'}
+          </span>
         </div>
 
-        <h3 style={{
-          fontSize: '1.8rem',
-          color: isAppActive ? '#10b981' : '#ef4444',
-          marginBottom: '1rem'
-        }}>
-          {isAppActive ? 'APPLICATION ACTIVE' : 'APPLICATION INACTIVE'}
-        </h3>
-
-        {/* Infos boutique */}
-        {shopInfo && (
+        {message && (
           <div style={{
-            background: '#f8fafc',
-            padding: '1rem',
-            borderRadius: '10px',
-            marginBottom: '2rem',
-            textAlign: 'left'
+            padding: '10px 15px',
+            backgroundColor: message.includes('Erreur') ? '#f8d7da' : '#d4edda',
+            color: message.includes('Erreur') ? '#721c24' : '#155724',
+            border: `1px solid ${message.includes('Erreur') ? '#f5c6cb' : '#c3e6cb'}`,
+            borderRadius: '6px',
+            fontSize: '14px'
           }}>
-            <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>📊 Informations:</h4>
-            <p style={{ margin: '0.25rem 0', color: '#64748b' }}>
-              <strong>Boutique:</strong> {shopInfo.shop}
-            </p>
-            <p style={{ margin: '0.25rem 0', color: '#64748b' }}>
-              <strong>Commandes totales:</strong> {shopInfo.totalOrders}
-            </p>
-            <p style={{ margin: '0.25rem 0', color: '#64748b' }}>
-              <strong>Revenus totaux:</strong> {shopInfo.totalRevenue} DH
-            </p>
+            {message}
           </div>
         )}
+      </div>
 
-        {/* Description */}
-        <p style={{
-          color: '#64748b',
-          marginBottom: '2rem',
-          lineHeight: '1.6'
+      <div style={{
+        backgroundColor: 'white',
+        padding: '25px',
+        borderRadius: '8px',
+        marginBottom: '25px',
+        border: '1px solid #e9ecef'
+      }}>
+        <h3 style={{ 
+          margin: '0 0 15px 0', 
+          color: '#495057' 
         }}>
-          {isAppActive ? (
-            <>
-              🎉 <strong>Parfait !</strong> Le formulaire COD est maintenant visible sur vos pages produit. 
-              Visitez une page produit de votre boutique pour voir le bouton "Commander à la livraison".
-            </>
-          ) : (
-            <>
-              ⚡ Cliquez sur le bouton ci-dessous pour activer le formulaire COD. 
-              Cela créera un Script Tag dans Shopify qui affichera le bouton sur vos pages produit.
-            </>
-          )}
-        </p>
-
-        {/* Bouton d'activation */}
+          🎛️ Contrôles
+        </h3>
+        
         <button
           onClick={handleActivation}
           disabled={isActivating}
           style={{
-            padding: '1.25rem 2.5rem',
-            background: isActivating ? '#94a3b8' : (
-              isAppActive ? 
-                'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : 
-                'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-            ),
-            color: 'white',
-            border: 'none',
-            borderRadius: '15px',
-            fontSize: '1.2rem',
+            width: '100%',
+            padding: '15px 25px',
+            fontSize: '16px',
             fontWeight: 'bold',
+            border: 'none',
+            borderRadius: '8px',
             cursor: isActivating ? 'not-allowed' : 'pointer',
+            backgroundColor: isActivating 
+              ? '#6c757d' 
+              : (isAppActive ? '#dc3545' : '#28a745'),
+            color: 'white',
             opacity: isActivating ? 0.7 : 1,
-            transition: 'all 0.3s ease',
-            marginBottom: '2rem',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+            transition: 'all 0.3s ease'
           }}
         >
-          {isActivating ? (
-            '⏳ En cours...'
-          ) : (
-            isAppActive ? 
-              '🔴 Désactiver l\'application' : 
-              '🟢 Activer l\'application'
-          )}
+          {isActivating 
+            ? '⏳ Traitement en cours...' 
+            : (isAppActive 
+              ? '🔴 Désactiver l\'application' 
+              : '🟢 Activer l\'application'
+            )
+          }
         </button>
+      </div>
 
-        {/* Message de résultat */}
-        {message && (
-          <div style={{
-            padding: '1rem',
-            borderRadius: '10px',
-            background: message.includes('❌') ? 
-              'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' :
-              'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
-            color: message.includes('❌') ? '#991b1b' : '#065f46',
-            border: `2px solid ${message.includes('❌') ? '#ef4444' : '#10b981'}`,
-            marginBottom: '1rem'
-          }}>
-            <strong>{message}</strong>
-          </div>
-        )}
-
-        {/* Instructions */}
-        <div style={{
-          background: '#f0f9ff',
-          padding: '1.5rem',
-          borderRadius: '10px',
-          fontSize: '0.9rem',
-          color: '#0369a1',
-          textAlign: 'left',
-          border: '2px solid #0ea5e9'
+      <div style={{
+        backgroundColor: '#fff3cd',
+        padding: '20px',
+        borderRadius: '8px',
+        border: '1px solid #ffeaa7',
+        marginBottom: '25px'
+      }}>
+        <h4 style={{ 
+          margin: '0 0 10px 0', 
+          color: '#856404' 
         }}>
-          <h4 style={{ margin: '0 0 1rem 0', color: '#0c4a6e' }}>📋 Instructions de test:</h4>
-          <ol style={{ margin: 0, paddingLeft: '1.5rem' }}>
-            <li>Activez l'application avec le bouton ci-dessus</li>
-            <li>Allez sur votre boutique : <strong>rt-solutions-test.myshopify.com</strong></li>
-            <li>Visitez n'importe quelle page produit</li>
-            <li>Vérifiez que le bouton "Commander à la livraison" apparaît</li>
-            <li>Testez le formulaire de commande</li>
-          </ol>
-        </div>
+          ℹ️ Instructions
+        </h4>
+        <ol style={{ 
+          margin: 0, 
+          paddingLeft: '20px', 
+          color: '#856404',
+          fontSize: '14px',
+          lineHeight: '1.5'
+        }}>
+          <li>Cliquez sur "Activer l'application" pour créer le Script Tag Shopify</li>
+          <li>Vérifiez que le statut passe à "ACTIVE" ✅</li>
+          <li>Allez sur une page produit de votre boutique test</li>
+          <li>Cherchez le bouton "Commander à la livraison" 💰</li>
+          <li>Testez le formulaire COD</li>
+        </ol>
+      </div>
 
-        {/* Bouton retour */}
-        <div style={{ marginTop: '2rem' }}>
-          <a 
-            href="/app" 
-            style={{
-              display: 'inline-block',
-              padding: '0.75rem 1.5rem',
-              background: '#667eea',
-              color: 'white',
-              textDecoration: 'none',
-              borderRadius: '10px',
-              fontWeight: 'bold',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            ← Retour au Dashboard
-          </a>
-        </div>
+      <div style={{
+        backgroundColor: '#d1ecf1',
+        padding: '20px',
+        borderRadius: '8px',
+        border: '1px solid #bee5eb'
+      }}>
+        <h4 style={{ 
+          margin: '0 0 10px 0', 
+          color: '#0c5460' 
+        }}>
+          🔗 Liens utiles
+        </h4>
+        <ul style={{ 
+          margin: 0, 
+          paddingLeft: '20px', 
+          color: '#0c5460',
+          fontSize: '14px',
+          lineHeight: '1.5'
+        }}>
+          <li>
+            <a 
+              href="https://rt-solutions-test.myshopify.com" 
+              target="_blank"
+              style={{ color: '#0c5460', textDecoration: 'underline' }}
+            >
+              Boutique test Shopify
+            </a>
+          </li>
+          <li>
+            <a 
+              href="/app" 
+              style={{ color: '#0c5460', textDecoration: 'underline' }}
+            >
+              Retour au Dashboard principal
+            </a>
+          </li>
+        </ul>
       </div>
     </div>
   );
