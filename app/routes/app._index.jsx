@@ -3,6 +3,7 @@ import { Form, useActionData, useNavigation } from "@remix-run/react";
 import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
+
 export const action = async ({ request }) => {
   const formData = await request.formData();
   const actionType = formData.get("action");
