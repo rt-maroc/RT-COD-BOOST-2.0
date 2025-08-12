@@ -4,6 +4,14 @@ import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
+export const loader = async ({ request }) => {
+  try {
+    const { session } = await authenticate.admin(request);
+    return json({ shop: session.shop });
+  } catch (error) {
+    return json({ shop: null });
+  }
+};
 export const action = async ({ request }) => {
   const formData = await request.formData();
   const actionType = formData.get("action");
